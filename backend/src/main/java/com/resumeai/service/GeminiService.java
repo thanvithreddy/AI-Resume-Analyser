@@ -22,12 +22,12 @@ public class GeminiService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    // List of models to try in priority order
+    // Currently active Gemini models (each has an independent free rate-limit pool)
     private static final List<String> MODEL_CANDIDATES = List.of(
-            "gemini-2.5-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro",
-            "gemini-2.0-flash"
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-flash-8b",
+            "gemini-2.0-flash-exp"
     );
 
     public GeminiService(RestTemplate restTemplate, ObjectMapper objectMapper) {
@@ -39,48 +39,45 @@ public class GeminiService {
         Exception lastException = null;
 
         for (String model : MODEL_CANDIDATES) {
-            for (int attempt = 1; attempt <= 2; attempt++) {
-                try {
-                    String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
-                    
-                    Map<String, Object> requestBody = Map.of(
-                            "contents", new Object[]{
-                                    Map.of("parts", new Object[]{
-                                            Map.of("text", prompt)
-                                    })
-                            },
-                            "generationConfig", Map.of(
-                                    "temperature", 0.3,
-                                    "maxOutputTokens", 8192
-                            )
-                    );
-                    
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.setContentType(MediaType.APPLICATION_JSON);
-                    HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-                    
-                    ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-                    JsonNode root = objectMapper.readTree(response.getBody());
-                    
-                    String text = root.path("candidates").get(0)
-                            .path("content").path("parts").get(0)
-                            .path("text").asText();
+            try {
+                String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+                
+                Map<String, Object> requestBody = Map.of(
+                        "contents", new Object[]{
+                                Map.of("parts", new Object[]{
+                                        Map.of("text", prompt)
+                                })
+                        },
+                        "generationConfig", Map.of(
+                                "temperature", 0.3,
+                                "maxOutputTokens", 8192
+                        )
+                );
+                
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+                
+                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+                JsonNode root = objectMapper.readTree(response.getBody());
+                
+                String text = root.path("candidates").get(0)
+                        .path("content").path("parts").get(0)
+                        .path("text").asText();
 
-                    log.info("Gemini API call succeeded using model: {}", model);
-                    return text;
-                } catch (HttpClientErrorException.TooManyRequests e) {
-                    log.warn("Gemini model {} hit rate limit (429), waiting 3s before retry...", model);
-                    lastException = e;
-                    try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
-                } catch (Exception e) {
-                    log.warn("Gemini model {} failed (attempt {}): {}", model, attempt, e.getMessage());
-                    lastException = e;
-                    break; // try next model
-                }
+                log.info("Gemini API call succeeded using model: {}", model);
+                return text;
+            } catch (HttpClientErrorException.TooManyRequests e) {
+                log.warn("Gemini model {} hit 429 rate limit, switching to next candidate...", model);
+                lastException = e;
+                // Continue to next model in candidate list immediately! Each model has its own quota pool.
+            } catch (Exception e) {
+                log.warn("Gemini model {} failed: {}", model, e.getMessage());
+                lastException = e;
             }
         }
 
         log.error("All Gemini model candidates failed.");
-        throw new RuntimeException("AI service busy/rate-limited. Please retry in 30 seconds: " + (lastException != null ? lastException.getMessage() : "Rate limited"));
+        throw new RuntimeException("Gemini AI free rate limit exceeded. Please wait 30 seconds and click Analyze again.");
     }
 }

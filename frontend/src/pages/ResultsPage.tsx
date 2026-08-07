@@ -64,30 +64,47 @@ export default function ResultsPage() {
     }
 
     const title = `${result.resumeFileName.replace('.pdf', '').replace('.txt', '')}_Rewritten_Resume`;
+    const rawText = result.rewrittenResume;
+    const lines = rawText.split('\n').map((l: string) => l.trim()).filter(Boolean);
 
-    const lines = result.rewrittenResume.split('\n');
-    let htmlContent = '';
+    let bodyHtml = '';
+    let inList = false;
 
     lines.forEach((line: string) => {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        htmlContent += '<div style="height: 6px;"></div>';
-      } else if (trimmed.startsWith('===') || trimmed.startsWith('---')) {
-        // Ignore separator lines
-      } else if (
-        trimmed === trimmed.toUpperCase() &&
-        trimmed.length < 60 &&
-        !trimmed.startsWith('•') &&
-        !trimmed.startsWith('-')
-      ) {
-        htmlContent += `<h2 style="font-size: 13px; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 16px; margin-bottom: 6px; border-bottom: 1.5px solid #0284c7; padding-bottom: 2px;">${trimmed}</h2>`;
-      } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-        const bulletText = trimmed.substring(1).trim();
-        htmlContent += `<div style="font-size: 11px; color: #334155; margin-left: 12px; margin-bottom: 4px; line-height: 1.5;"><span style="color: #0284c7; margin-right: 6px;">•</span>${bulletText}</div>`;
+      if (line.startsWith('===') || line.startsWith('---')) return;
+
+      const isHeading = (
+        line === line.toUpperCase() &&
+        line.length < 60 &&
+        !line.startsWith('•') &&
+        !line.startsWith('-')
+      );
+
+      if (isHeading) {
+        if (inList) { bodyHtml += '</ul>'; inList = false; }
+        bodyHtml += `<div className="section-header">${line}</div>`;
+      } else if (line.startsWith('•') || line.startsWith('-')) {
+        if (!inList) { bodyHtml += '<ul>'; inList = true; }
+        let itemText = line.replace(/^[•\-]\s*/, '');
+        // Highlight bold lead-ins (e.g. "Languages:")
+        if (itemText.includes(':')) {
+          const parts = itemText.split(':');
+          itemText = `<strong>${parts[0]}:</strong> ${parts.slice(1).join(':')}`;
+        }
+        bodyHtml += `<li>${itemText}</li>`;
       } else {
-        htmlContent += `<p style="font-size: 11px; color: #334155; margin-bottom: 4px; line-height: 1.5;">${trimmed}</p>`;
+        if (inList) { bodyHtml += '</ul>'; inList = false; }
+        if (line.includes('@') && line.includes('|')) {
+          bodyHtml += `<div className="contact-bar">${line.split('|').join(' <span>|</span> ')}</div>`;
+        } else if (line.length < 55 && !line.endsWith('.')) {
+          bodyHtml += `<div className="sub-header">${line}</div>`;
+        } else {
+          bodyHtml += `<p>${line}</p>`;
+        }
       }
     });
+
+    if (inList) { bodyHtml += '</ul>'; }
 
     const fullHtml = `
       <!DOCTYPE html>
@@ -95,15 +112,65 @@ export default function ResultsPage() {
       <head>
         <title>${title}</title>
         <style>
-          @page { size: A4; margin: 15mm 15mm; }
+          @page { size: A4; margin: 12mm 15mm; }
           body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             color: #0f172a;
-            line-height: 1.5;
+            line-height: 1.45;
             padding: 24px;
             max-width: 800px;
             margin: 0 auto;
             background: #ffffff;
+            font-size: 10pt;
+          }
+          .contact-bar {
+            text-align: center;
+            font-size: 9pt;
+            color: #475569;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+          }
+          .contact-bar span {
+            margin: 0 4px;
+            color: #94a3b8;
+          }
+          .section-header {
+            font-size: 11pt;
+            font-weight: 800;
+            color: #0284c7;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-top: 14px;
+            margin-bottom: 6px;
+            border-bottom: 1.5px solid #0284c7;
+            padding-bottom: 2px;
+          }
+          .sub-header {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 10pt;
+            margin-top: 6px;
+            margin-bottom: 2px;
+          }
+          p {
+            font-size: 9.5pt;
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+          }
+          ul {
+            margin-top: 3px;
+            margin-bottom: 8px;
+            padding-left: 18px;
+          }
+          li {
+            font-size: 9.5pt;
+            color: #334155;
+            margin-bottom: 3px;
+            text-align: justify;
+          }
+          strong {
+            color: #0f172a;
           }
           @media print {
             body { padding: 0; }
@@ -111,12 +178,10 @@ export default function ResultsPage() {
         </style>
       </head>
       <body>
-        ${htmlContent}
+        ${bodyHtml}
         <script>
           window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
+            setTimeout(function() { window.print(); }, 300);
           };
         </script>
       </body>
@@ -125,7 +190,7 @@ export default function ResultsPage() {
 
     printWindow.document.write(fullHtml);
     printWindow.document.close();
-    toast.success('Opening print dialog to save formatted PDF!');
+    toast.success('Opening PDF Resume Template!');
   };
 
   const getScoreColor = (score: number) => {
@@ -158,7 +223,7 @@ export default function ResultsPage() {
             </div>
             <div className="flex items-center gap-3">
               <button onClick={handleDownloadPDF} className="btn-primary text-sm py-2 px-4 flex items-center gap-2 glow-blue">
-                <Printer className="w-4 h-4" /> Download PDF Resume
+                <Printer className="w-4 h-4" /> Download PDF Resume Template
               </button>
               <button onClick={handleDownloadTXT} className="btn-outline text-sm py-2 px-4 flex items-center gap-2">
                 <Download className="w-4 h-4" /> TXT

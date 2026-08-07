@@ -5,7 +5,7 @@ import { analysisAPI } from '../lib/api';
 import toast from 'react-hot-toast';
 import {
   Award, CheckCircle2, XCircle, AlertTriangle, Lightbulb,
-  Download, Copy, RefreshCw, FileText, ArrowLeft, Check
+  Download, Copy, RefreshCw, FileText, ArrowLeft, Check, Printer
 } from 'lucide-react';
 
 export default function ResultsPage() {
@@ -45,15 +45,87 @@ export default function ResultsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownload = () => {
+  const handleDownloadTXT = () => {
     const element = document.createElement('a');
     const file = new Blob([result.rewrittenResume], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = `${result.resumeFileName.replace('.pdf', '')}_Rewritten.txt`;
+    element.download = `${result.resumeFileName.replace('.pdf', '').replace('.txt', '')}_Rewritten.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-    toast.success('Downloaded rewritten resume!');
+    toast.success('Downloaded TXT file!');
+  };
+
+  const handleDownloadPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to download PDF template');
+      return;
+    }
+
+    const title = `${result.resumeFileName.replace('.pdf', '').replace('.txt', '')}_Rewritten_Resume`;
+
+    const lines = result.rewrittenResume.split('\n');
+    let htmlContent = '';
+
+    lines.forEach((line: string) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        htmlContent += '<div style="height: 6px;"></div>';
+      } else if (trimmed.startsWith('===') || trimmed.startsWith('---')) {
+        // Ignore separator lines
+      } else if (
+        trimmed === trimmed.toUpperCase() &&
+        trimmed.length < 60 &&
+        !trimmed.startsWith('•') &&
+        !trimmed.startsWith('-')
+      ) {
+        htmlContent += `<h2 style="font-size: 13px; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 16px; margin-bottom: 6px; border-bottom: 1.5px solid #0284c7; padding-bottom: 2px;">${trimmed}</h2>`;
+      } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+        const bulletText = trimmed.substring(1).trim();
+        htmlContent += `<div style="font-size: 11px; color: #334155; margin-left: 12px; margin-bottom: 4px; line-height: 1.5;"><span style="color: #0284c7; margin-right: 6px;">•</span>${bulletText}</div>`;
+      } else {
+        htmlContent += `<p style="font-size: 11px; color: #334155; margin-bottom: 4px; line-height: 1.5;">${trimmed}</p>`;
+      }
+    });
+
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          @page { size: A4; margin: 15mm 15mm; }
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #0f172a;
+            line-height: 1.5;
+            padding: 24px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+          }
+          @media print {
+            body { padding: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        ${htmlContent}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(fullHtml);
+    printWindow.document.close();
+    toast.success('Opening print dialog to save formatted PDF!');
   };
 
   const getScoreColor = (score: number) => {
@@ -85,11 +157,14 @@ export default function ResultsPage() {
               <p className="text-slate-500 text-sm mt-1">File: <span className="text-slate-700 font-semibold">{result.resumeFileName}</span></p>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={handleDownload} className="btn-outline text-sm py-2 px-4 flex items-center gap-2">
-                <Download className="w-4 h-4" /> Download Rewritten
+              <button onClick={handleDownloadPDF} className="btn-primary text-sm py-2 px-4 flex items-center gap-2 glow-blue">
+                <Printer className="w-4 h-4" /> Download PDF Resume
               </button>
-              <Link to="/upload" className="btn-primary text-sm py-2 px-4 flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" /> New Analysis
+              <button onClick={handleDownloadTXT} className="btn-outline text-sm py-2 px-4 flex items-center gap-2">
+                <Download className="w-4 h-4" /> TXT
+              </button>
+              <Link to="/upload" className="btn-outline text-sm py-2 px-4 flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" /> New
               </Link>
             </div>
           </div>
@@ -228,8 +303,11 @@ export default function ResultsPage() {
                     {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
-                  <button onClick={handleDownload} className="btn-primary text-xs py-2 px-3 flex items-center gap-1">
-                    <Download className="w-4 h-4" /> Download TXT
+                  <button onClick={handleDownloadPDF} className="btn-primary text-xs py-2 px-3 flex items-center gap-1">
+                    <Printer className="w-4 h-4" /> Download Formatted PDF
+                  </button>
+                  <button onClick={handleDownloadTXT} className="btn-outline text-xs py-2 px-3 flex items-center gap-1">
+                    <Download className="w-4 h-4" /> TXT
                   </button>
                 </div>
               </div>

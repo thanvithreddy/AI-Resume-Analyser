@@ -39,23 +39,25 @@ public class AnalysisService {
     public AnalysisResponse analyzeResume(MultipartFile resumeFile, String jobDescription) throws Exception {
         User user = getCurrentUser();
         String resumeText = resumeParserService.extractText(resumeFile);
-        String analysisJson = callGeminiForAnalysis(resumeText, jobDescription);
-        String rewrittenResume = callGeminiForRewrite(resumeText, jobDescription);
-        AnalysisResult result = parseAndSaveResult(user, resumeFile.getOriginalFilename(), resumeText, jobDescription, analysisJson, rewrittenResume);
+        
+        // Single combined AI call for both analysis & resume rewrite
+        String combinedJson = callGeminiForAnalysisAndRewrite(resumeText, jobDescription);
+        AnalysisResult result = parseAndSaveResult(user, resumeFile.getOriginalFilename(), resumeText, jobDescription, combinedJson);
         return buildResponse(result);
     }
 
-    private String callGeminiForAnalysis(String resumeText, String jobDescription) {
+    private String callGeminiForAnalysisAndRewrite(String resumeText, String jobDescription) {
         String prompt = """
-                You are an expert ATS resume analyzer and career coach.
-                Analyze this resume against the job description and return ONLY valid JSON (no markdown, no code blocks).
-                
+                You are an expert ATS resume analyzer, career coach, and professional resume writer.
+                Analyze this resume against the job description AND provide a completely rewritten ATS-optimized resume.
+                Return ONLY valid JSON (no markdown wrapping, no code blocks).
+
                 Resume:
                 %s
-                
+
                 Job Description:
                 %s
-                
+
                 Return this exact JSON structure:
                 {
                   "overallScore": <0-100>,
@@ -68,12 +70,12 @@ public class AnalysisService {
                   "summaryFeedback": {
                     "score": <0-10>,
                     "feedback": "specific feedback here",
-                    "improved": "improved version here"
+                    "improved": "improved summary here"
                   },
                   "experienceFeedback": {
                     "score": <0-10>,
                     "feedback": "specific feedback here",
-                    "improved": "improved bullet points here"
+                    "improved": "improved experience bullet points"
                   },
                   "skillsFeedback": {
                     "score": <0-10>,
@@ -81,9 +83,11 @@ public class AnalysisService {
                     "improved": "reorganized skills section"
                   },
                   "topIssues": ["issue1", "issue2", "issue3"],
-                  "suggestions": ["suggestion1", "suggestion2", "suggestion3"]
+                  "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
+                  "rewrittenResume": "COMPLETE PROFESSIONALLY REWRITTEN AND ENHANCED ATS-OPTIMIZED RESUME TEXT HERE"
                 }
                 """.formatted(resumeText, jobDescription);
+
         String raw = geminiService.generateContent(prompt);
         raw = raw.trim();
         if (raw.startsWith("```")) {
@@ -92,36 +96,10 @@ public class AnalysisService {
         return raw;
     }
 
-    private String callGeminiForRewrite(String resumeText, String jobDescription) {
-        String prompt = """
-                You are an expert resume writer and career coach.
-                Completely rewrite and enhance this resume to perfectly match the job description.
-                Make it ATS-optimized, professional, and compelling.
-                
-                Original Resume:
-                %s
-                
-                Target Job Description:
-                %s
-                
-                Rules:
-                1. Keep all true facts but rewrite them powerfully
-                2. Add relevant keywords from the JD naturally
-                3. Use strong action verbs (Led, Achieved, Delivered, Optimized)
-                4. Quantify achievements wherever possible
-                5. Format cleanly with clear sections
-                6. Make the summary compelling and role-specific
-                7. Reorganize skills to match JD priorities
-                
-                Return ONLY the complete rewritten resume text, no explanations.
-                """.formatted(resumeText, jobDescription);
-        return geminiService.generateContent(prompt);
-    }
-
     private AnalysisResult parseAndSaveResult(User user, String fileName, String resumeText,
-                                               String jobDescription, String analysisJson, String rewrittenResume) {
+                                               String jobDescription, String combinedJson) {
         try {
-            JsonNode json = objectMapper.readTree(analysisJson);
+            JsonNode json = objectMapper.readTree(combinedJson);
             AnalysisResult result = AnalysisResult.builder()
                     .user(user)
                     .resumeFileName(fileName)
@@ -139,7 +117,7 @@ public class AnalysisService {
                     .skillsFeedback(json.path("skillsFeedback").toString())
                     .topIssues(json.path("topIssues").toString())
                     .suggestions(json.path("suggestions").toString())
-                    .rewrittenResume(rewrittenResume)
+                    .rewrittenResume(json.path("rewrittenResume").asText(""))
                     .build();
             return analysisResultRepository.save(result);
         } catch (Exception e) {

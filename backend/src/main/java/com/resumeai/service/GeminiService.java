@@ -22,12 +22,12 @@ public class GeminiService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    // Supported Gemini Models
+    // Active Gemini models
     private static final List<String> MODEL_CANDIDATES = List.of(
             "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-flash-8b",
-            "gemini-2.0-flash-exp"
+            "gemini-1.5-flash-001",
+            "gemini-1.5-pro-001",
+            "gemini-2.0-flash-lite"
     );
 
     public GeminiService(RestTemplate restTemplate, ObjectMapper objectMapper) {

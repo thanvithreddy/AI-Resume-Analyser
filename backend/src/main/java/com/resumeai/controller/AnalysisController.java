@@ -41,4 +41,11 @@ public class AnalysisController {
     public ResponseEntity<AnalysisResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(analysisService.getAnalysisById(id));
     }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a specific analysis result")
+    public ResponseEntity<java.util.Map<String, String>> deleteById(@PathVariable Long id) {
+        analysisService.deleteAnalysis(id);
+        return ResponseEntity.ok(java.util.Map.of("message", "Analysis deleted successfully"));
+    }
 }

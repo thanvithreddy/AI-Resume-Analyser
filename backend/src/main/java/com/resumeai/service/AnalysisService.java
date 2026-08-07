@@ -367,6 +367,16 @@ public class AnalysisService {
         return buildResponse(result);
     }
 
+    public void deleteAnalysis(Long id) {
+        User user = getCurrentUser();
+        AnalysisResult result = analysisResultRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Analysis not found"));
+        if (!result.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Access denied");
+        }
+        analysisResultRepository.delete(result);
+    }
+
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)

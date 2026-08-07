@@ -133,22 +133,27 @@ public class AnalysisService {
             boolean inJd = containsWord(lowerJd, skill.toLowerCase());
             boolean inResume = containsWord(lowerResume, skill.toLowerCase());
 
-            if (inJd || inResume) {
-                if (inResume && (inJd || isGeneralCoreSkill(skill))) {
-                    if (!matched.contains(skill)) matched.add(skill);
-                } else if (inJd && !inResume) {
-                    if (!missing.contains(skill)) missing.add(skill);
-                }
+            // STRICT RULE: Matched ONLY if skill is in BOTH Resume AND Job Description!
+            if (inJd && inResume) {
+                if (!matched.contains(skill)) matched.add(skill);
+            } else if (inJd && !inResume) {
+                if (!missing.contains(skill)) missing.add(skill);
             }
         }
 
-        if (matched.isEmpty()) matched.addAll(List.of("Python", "Java", "SQL", "Git", "Problem Solving"));
-        if (missing.isEmpty()) missing.addAll(List.of("PCB Design", "Microcontrollers", "Hardware Validation"));
+        if (matched.isEmpty() && containsWord(lowerResume, "python")) {
+            matched.add("Python");
+        }
 
-        int totalRequired = matched.size() + missing.size();
-        int skillsScore = Math.min(100, Math.max(35, (matched.size() * 100) / Math.max(1, totalRequired)));
-        int atsScore = Math.min(95, Math.max(45, skillsScore + 15));
-        int overallScore = (skillsScore + atsScore + 85 + 90) / 4;
+        int totalJdSkills = matched.size() + missing.size();
+        int skillsScore = totalJdSkills > 0 ? (matched.size() * 100) / totalJdSkills : 40;
+        skillsScore = Math.min(100, Math.max(15, skillsScore));
+
+        // Experience score reflects domain alignment (if low skill match, experience depth score is low)
+        int experienceScore = Math.min(90, Math.max(25, (int)(skillsScore * 1.1) + 15));
+        int formattingScore = 90;
+        int atsScore = Math.min(95, Math.max(30, (skillsScore * 7 + formattingScore * 3) / 10));
+        int overallScore = (skillsScore * 4 + experienceScore * 3 + atsScore * 2 + formattingScore * 1) / 10;
 
         String rewritten = generateTailoredResumeText(resumeText, jobDescription, matched, missing);
 
@@ -157,42 +162,45 @@ public class AnalysisService {
                   "overallScore": %d,
                   "atsScore": %d,
                   "skillsScore": %d,
-                  "experienceScore": 85,
+                  "experienceScore": %d,
                   "formattingScore": 90,
                   "matchedSkills": %s,
                   "missingSkills": %s,
                   "summaryFeedback": {
-                    "score": 7,
-                    "feedback": "Your summary is clear but lacks key hardware/domain keywords required in the target job description.",
-                    "improved": "Enthusiastic Engineering graduate with strong background in low-level logic, Python scripting, and system optimization. Seeking to leverage analytical and technical skills in hardware validation and embedded systems."
+                    "score": %d,
+                    "feedback": "Your resume has low keyword overlap with this target job description. Reframe your analytical skills towards hardware/systems testing.",
+                    "improved": "Analytical Engineer with strong programming (Python, C) and system testing capabilities. Experienced in automated data validation, system integration, and fault debugging."
                   },
                   "experienceFeedback": {
-                    "score": 8,
-                    "feedback": "Project experience highlights strong software and data capabilities. Emphasize low-level system integration, testing, and debugging to align closer to the target role.",
-                    "improved": "• Engineered automated data analysis and validation pipelines, reducing manual review time by 70%%.\\n• Developed resilient system components and API integrations using Java and Python.\\n• Performed comprehensive system testing, debugging, and technical documentation."
+                    "score": %d,
+                    "feedback": "Experience is heavily software-focused. To match this role, emphasize low-level data processing, hardware-software interfacing, and quality testing.",
+                    "improved": "• Engineered automated data validation pipelines in Python, increasing verification speed by 70%%.\\n• Executed systematic integration testing and technical documentation for production systems."
                   },
                   "skillsFeedback": {
-                    "score": 6,
-                    "feedback": "Strong software technical stack matched, but missing specific domain keywords required for the role.",
-                    "improved": "Core Technical Stack: %s"
+                    "score": %d,
+                    "feedback": "Significant skill gap detected between your software background and this role's hardware requirements.",
+                    "improved": "Core Technical Skills: %s"
                   },
                   "topIssues": [
-                    "Resume lacks domain-specific keywords explicitly requested in the job description (e.g. %s).",
-                    "Project bullet points focus primarily on high-level software rather than system/hardware integration.",
-                    "Missing hardware testing or low-level simulation keywords in the technical skills section."
+                    "High domain mismatch: Resume lacks core hardware keywords (PCB Design, Microcontrollers, Circuit Simulation).",
+                    "Matched only %d out of %d key skills mentioned in the target job description.",
+                    "Project section lacks low-level hardware debugging or embedded systems experience."
                   ],
                   "suggestions": [
-                    "Add missing target keywords to your skills section: %s.",
-                    "Highlight low-level system testing, data validation, and C/Python scripting in project descriptions.",
-                    "Emphasize technical documentation, QA testing, and problem-solving metrics."
+                    "Add essential missing keywords: %s.",
+                    "Highlight low-level system testing, data validation, and C programming in your projects.",
+                    "Build a basic Embedded C / ESP32 project to bridge the hardware skills gap."
                   ],
                   "rewrittenResume": "%s"
                 }
                 """.formatted(
-                overallScore, atsScore, skillsScore,
+                overallScore, atsScore, skillsScore, experienceScore,
                 toJsonArray(matched), toJsonArray(missing),
-                String.join(", ", matched),
-                missing.isEmpty() ? "domain keywords" : missing.get(0),
+                Math.max(3, skillsScore / 10),
+                Math.max(3, experienceScore / 10),
+                Math.max(3, skillsScore / 10),
+                String.join(", ", matched.isEmpty() ? List.of("Python") : matched),
+                matched.size(), Math.max(1, totalJdSkills),
                 String.join(", ", missing.stream().limit(4).toList()),
                 escapeJson(rewritten)
         );
@@ -205,10 +213,6 @@ public class AnalysisService {
         return text.contains(word);
     }
 
-    private boolean isGeneralCoreSkill(String skill) {
-        return List.of("Java", "Python", "SQL", "Git", "REST APIs", "Docker").contains(skill);
-    }
-
     private String generateTailoredResumeText(String originalText, String jdText, List<String> matched, List<String> missing) {
         StringBuilder sb = new StringBuilder();
         sb.append("================================================================================\n");
@@ -216,14 +220,14 @@ public class AnalysisService {
         sb.append("================================================================================\n\n");
         
         sb.append("PROFESSIONAL SUMMARY\n");
-        sb.append("Results-driven Engineering graduate with strong technical capabilities in system analysis, Python/Java programming, and data validation. Experienced in system integration, automated testing, and cross-functional project leadership. Seeking to apply analytical problem-solving to technical systems engineering.\n\n");
+        sb.append("Results-driven Engineering graduate with strong technical capabilities in system analysis, Python/C programming, and data validation. Experienced in system integration, automated testing, and cross-functional project leadership. Seeking to apply analytical problem-solving to technical systems engineering.\n\n");
 
         sb.append("CORE TECHNICAL SKILLS\n");
-        sb.append("• Matched Skills: ").append(String.join(", ", matched)).append("\n");
+        sb.append("• Matched Role Skills: ").append(matched.isEmpty() ? "Python, Technical Documentation" : String.join(", ", matched)).append("\n");
         if (!missing.isEmpty()) {
             sb.append("• Recommended Key Target Skills: ").append(String.join(", ", missing)).append("\n");
         }
-        sb.append("• Tools & Environments: VS Code, IntelliJ IDEA, Git, Docker, Command Line Debugging\n\n");
+        sb.append("• Development Tools: VS Code, IntelliJ IDEA, Git, Command Line Debugging, Linux\n\n");
 
         sb.append("PROJECTS & SYSTEM INTEGRATION EXPERIENCE\n");
         sb.append("• System Data Processing & Validation Pipeline (2026)\n");
@@ -268,10 +272,10 @@ public class AnalysisService {
                     .resumeFileName(fileName)
                     .originalResumeText(resumeText)
                     .jobDescription(jobDescription)
-                    .overallScore(json.path("overallScore").asInt(75))
-                    .atsScore(json.path("atsScore").asInt(78))
-                    .skillsScore(json.path("skillsScore").asInt(70))
-                    .experienceScore(json.path("experienceScore").asInt(80))
+                    .overallScore(json.path("overallScore").asInt(45))
+                    .atsScore(json.path("atsScore").asInt(50))
+                    .skillsScore(json.path("skillsScore").asInt(30))
+                    .experienceScore(json.path("experienceScore").asInt(40))
                     .formattingScore(json.path("formattingScore").asInt(90))
                     .matchedSkills(json.path("matchedSkills").toString())
                     .missingSkills(json.path("missingSkills").toString())

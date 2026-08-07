@@ -1,125 +1,110 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { analysisAPI } from '../lib/api';
-import { AnalysisResult } from '../types';
-import { useAuth } from '../contexts/AuthContext';
-import { FileText, Upload, TrendingUp, Clock, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
-
-function ScoreBar({ score, color }: { score: number; color: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${score}%` }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-          className="h-full rounded-full"
-          style={{ backgroundColor: color }}
-        />
-      </div>
-      <span className="text-white/60 text-sm w-8">{score}</span>
-    </div>
-  );
-}
+import toast from 'react-hot-toast';
+import { FileText, ArrowRight, Clock, Plus } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const [history, setHistory] = useState<AnalysisResult[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     analysisAPI.getHistory()
       .then(res => setHistory(res.data))
-      .catch(console.error)
+      .catch(() => toast.error('Failed to load history'))
       .finally(() => setLoading(false));
   }, []);
 
-  const avgScore = history.length > 0 ? Math.round(history.reduce((a, b) => a + b.overallScore, 0) / history.length) : 0;
-  const bestScore = history.length > 0 ? Math.max(...history.map(h => h.overallScore)) : 0;
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-24 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-6">
+    <div className="min-h-screen pt-24 pb-16 px-6">
       <div className="max-w-6xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          {/* Welcome */}
-          <div className="flex items-center justify-between mb-8">
+          
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-4xl font-black text-white">Dashboard</h1>
-              <p className="text-white/50 mt-1">Welcome back, {user?.fullName} 👋</p>
+              <h1 className="text-3xl font-black text-slate-900">Analysis History</h1>
+              <p className="text-slate-500 text-sm mt-1">View your previous resume analyses and AI rewrites</p>
             </div>
-            <Link to="/upload" id="newAnalysisBtn"
-              className="btn-primary flex items-center gap-2">
-              <Upload className="w-4 h-4" /> New Analysis
+            <Link to="/upload" className="btn-primary flex items-center justify-center gap-2 text-sm py-3 px-6">
+              <Plus className="w-4 h-4" /> New Analysis
             </Link>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {[
-              { icon: FileText, label: 'Total Analyses', value: history.length, color: 'from-blue-500 to-cyan-500' },
-              { icon: TrendingUp, label: 'Average Score', value: avgScore, color: 'from-purple-500 to-pink-500' },
-              { icon: Clock, label: 'Best Score', value: bestScore, color: 'from-green-500 to-emerald-500' },
-            ].map(({ icon: Icon, label, value, color }) => (
-              <motion.div key={label} whileHover={{ y: -3 }} className="card glass-hover">
-                <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-lg flex items-center justify-center mb-3`}>
-                  <Icon className="w-5 h-5 text-white" />
-                </div>
-                <div className="text-3xl font-black text-white">{value}</div>
-                <div className="text-white/50 text-sm mt-1">{label}</div>
-              </motion.div>
-            ))}
-          </div>
+          {/* History List */}
+          {history.length === 0 ? (
+            <div className="card text-center py-16 shadow-sm border border-slate-200">
+              <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-sky-200">
+                <FileText className="w-8 h-8 text-sky-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No analyses yet</h3>
+              <p className="text-slate-500 text-sm max-w-sm mx-auto mb-6">Upload your first resume and job description to get instant ATS scores and AI rewrites</p>
+              <Link to="/upload" className="btn-primary inline-flex items-center gap-2 text-sm py-3 px-6">
+                Start First Analysis <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {history.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => navigate(`/results/${item.id}`, { state: { result: item } })}
+                  className="card glass-hover cursor-pointer shadow-sm border border-slate-200/80 group"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center border border-sky-200">
+                      <FileText className="w-5 h-5 text-sky-600" />
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      item.overallScore >= 80 ? 'bg-emerald-100 text-emerald-800' :
+                      item.overallScore >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                    }`}>
+                      Score: {item.overallScore}/100
+                    </span>
+                  </div>
 
-          {/* History */}
-          <div className="card">
-            <h2 className="section-title">Analysis History</h2>
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-white/40">Loading...</p>
-              </div>
-            ) : history.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                <p className="text-white/40 mb-4">No analyses yet</p>
-                <Link to="/upload" className="btn-primary inline-flex items-center gap-2">
-                  <Upload className="w-4 h-4" /> Analyze your first resume
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {history.map((item, i) => (
-                  <motion.div key={item.id}
-                    initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                  >
-                    <Link to={`/results/${item.id}`}
-                      className="flex items-center gap-4 p-4 rounded-xl glass glass-hover group">
-                      <div className="w-12 h-12 bg-primary-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary-400 font-black text-lg">{item.overallScore}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold truncate">{item.resumeFileName}</p>
-                        <div className="flex items-center gap-4 mt-1">
-                          <ScoreBar score={item.atsScore} color="#0ea5e9" />
-                          <span className="text-white/30 text-xs whitespace-nowrap">
-                            ATS: {item.atsScore}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-white/40 text-sm">
-                          {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy') : ''}
-                        </p>
-                        <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white mt-1 ml-auto transition-colors" />
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <h3 className="text-lg font-bold text-slate-900 truncate mb-1">{item.resumeFileName}</h3>
+                  <div className="flex items-center gap-1 text-slate-400 text-xs mb-4">
+                    <Clock className="w-3.5 h-3.5" />
+                    {new Date(item.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100 text-center">
+                    <div>
+                      <div className="text-slate-400 text-[10px] font-semibold uppercase">ATS</div>
+                      <div className="text-slate-800 font-bold text-sm">{item.atsScore}%</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400 text-[10px] font-semibold uppercase">Skills</div>
+                      <div className="text-slate-800 font-bold text-sm">{item.skillsScore}%</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400 text-[10px] font-semibold uppercase">Experience</div>
+                      <div className="text-slate-800 font-bold text-sm">{item.experienceScore}%</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-end text-sky-600 font-semibold text-xs group-hover:translate-x-1 transition-transform">
+                    View Full Analysis <ArrowRight className="w-4 h-4 ml-1" />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
         </motion.div>
       </div>
     </div>

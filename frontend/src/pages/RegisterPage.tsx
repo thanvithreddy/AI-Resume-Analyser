@@ -32,35 +32,35 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-6 pt-20">
       <div className="w-full max-w-md">
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="card">
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="card shadow-xl">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-black text-white">Create Account</h1>
-            <p className="text-white/50 mt-2">Start analyzing resumes for free</p>
+            <h1 className="text-3xl font-black text-slate-900">Create Account</h1>
+            <p className="text-slate-500 mt-2">Start analyzing resumes for free</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input id="fullName" type="text" placeholder="Full Name" value={form.fullName}
                 onChange={e => setForm({ ...form, fullName: e.target.value })}
                 className="input-field pl-10" required />
             </div>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input id="email" type="email" placeholder="Email address" value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 className="input-field pl-10" required />
             </div>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input id="password" type={showPass ? 'text' : 'password'} placeholder="Password (min 8 chars)" value={form.password}
                 onChange={e => setForm({ ...form, password: e.target.value })}
                 className="input-field pl-10 pr-10" required />
               <button type="button" onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                 {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
@@ -69,9 +69,9 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="text-center text-white/50 text-sm mt-6">
+          <p className="text-center text-slate-500 text-sm mt-6">
             Already have an account?{' '}
-            <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium">Sign in</Link>
+            <Link to="/login" className="text-sky-600 hover:text-sky-700 font-semibold">Sign in</Link>
           </p>
         </motion.div>
       </div>

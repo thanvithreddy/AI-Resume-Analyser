@@ -50,40 +50,40 @@ export default function UploadPage() {
     <div className="min-h-screen pt-24 pb-12 px-6">
       <div className="max-w-4xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-4xl font-black text-white mb-2 text-center">Analyze Your Resume</h1>
-          <p className="text-white/50 text-center mb-10">Upload your resume and paste the job description to get started</p>
+          <h1 className="text-4xl font-black text-slate-900 mb-2 text-center">Analyze Your Resume</h1>
+          <p className="text-slate-500 text-center mb-10">Upload your resume and paste the job description to get started</p>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* File Upload */}
-            <div className="card">
-              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary-400" /> Your Resume
+            <div className="card shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-sky-600" /> Your Resume
               </h2>
               <div
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200
-                  ${isDragActive ? 'border-primary-400 bg-primary-500/10' : 'border-white/20 hover:border-primary-500/50 hover:bg-white/5'}`}
+                  ${isDragActive ? 'border-sky-500 bg-sky-50' : 'border-slate-300 hover:border-sky-400 hover:bg-slate-50/50'}`}
               >
                 <input {...getInputProps()} />
                 <AnimatePresence>
                   {file ? (
                     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                      <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FileText className="w-8 h-8 text-green-400" />
+                      <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-200">
+                        <FileText className="w-8 h-8 text-emerald-600" />
                       </div>
-                      <p className="text-white font-semibold">{file.name}</p>
-                      <p className="text-white/40 text-sm mt-1">{(file.size / 1024).toFixed(1)} KB</p>
+                      <p className="text-slate-900 font-semibold">{file.name}</p>
+                      <p className="text-slate-500 text-sm mt-1">{(file.size / 1024).toFixed(1)} KB</p>
                       <button onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                        className="mt-3 text-red-400 hover:text-red-300 flex items-center gap-1 mx-auto text-sm">
+                        className="mt-3 text-red-600 hover:text-red-700 flex items-center gap-1 mx-auto text-sm font-medium">
                         <X className="w-4 h-4" /> Remove
                       </button>
                     </motion.div>
                   ) : (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      <Upload className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                      <p className="text-white font-medium">Drop your resume here</p>
-                      <p className="text-white/40 text-sm mt-1">or click to browse</p>
-                      <p className="text-white/30 text-xs mt-3">PDF, TXT up to 10MB</p>
+                      <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                      <p className="text-slate-800 font-medium">Drop your resume here</p>
+                      <p className="text-slate-500 text-sm mt-1">or click to browse</p>
+                      <p className="text-slate-400 text-xs mt-3">PDF, TXT up to 10MB</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -91,9 +91,9 @@ export default function UploadPage() {
             </div>
 
             {/* Job Description */}
-            <div className="card">
-              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary-400" /> Job Description
+            <div className="card shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-sky-600" /> Job Description
               </h2>
               <textarea
                 id="jobDescription"
@@ -103,10 +103,10 @@ export default function UploadPage() {
                 className="input-field h-[260px] resize-none"
               />
               <div className="flex items-center justify-between mt-2">
-                <p className="text-white/30 text-xs flex items-center gap-1">
+                <p className="text-slate-400 text-xs flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> More detail = better analysis
                 </p>
-                <p className="text-white/30 text-xs">{jobDescription.length} chars</p>
+                <p className="text-slate-400 text-xs">{jobDescription.length} chars</p>
               </div>
             </div>
           </div>
@@ -125,7 +125,7 @@ export default function UploadPage() {
                 <><Sparkles className="w-5 h-5" /> Analyze & Rewrite Resume</>
               )}
             </button>
-            <p className="text-white/30 text-sm mt-3">Average time: 20-30 seconds</p>
+            <p className="text-slate-500 text-sm mt-3">Average time: 20-30 seconds</p>
           </motion.div>
         </motion.div>
       </div>

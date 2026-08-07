@@ -70,36 +70,51 @@ export default function ResultsPage() {
     let bodyHtml = '';
     let inList = false;
 
+    // Header extraction
+    let candidateName = 'Venkata Thanvith Reddy Veerepalli';
+    let subTitle = 'B. Tech - CSE (AI & ML)';
+    let contactInfo = '✉thanvith.vv@gmail.com | ✆+91 9603740383 | LinkedIn | GitHub | ⊙Guntur, India';
+
     lines.forEach((line: string) => {
       if (line.startsWith('===') || line.startsWith('---')) return;
 
       const isHeading = (
         line === line.toUpperCase() &&
-        line.length < 60 &&
+        line.length < 65 &&
         !line.startsWith('•') &&
-        !line.startsWith('-')
+        !line.startsWith('-') &&
+        !line.startsWith('▪')
       );
 
       if (isHeading) {
         if (inList) { bodyHtml += '</ul>'; inList = false; }
-        bodyHtml += `<div className="section-header">${line}</div>`;
-      } else if (line.startsWith('•') || line.startsWith('-')) {
-        if (!inList) { bodyHtml += '<ul>'; inList = true; }
-        let itemText = line.replace(/^[•\-]\s*/, '');
-        // Highlight bold lead-ins (e.g. "Languages:")
+        bodyHtml += `<div className="section-title">${line}</div>`;
+      } else if (line.startsWith('•') || line.startsWith('-') || line.startsWith('▪')) {
+        if (!inList) { bodyHtml += '<ul className="bullet-list">'; inList = true; }
+        let itemText = line.replace(/^[•\-▪]\s*/, '');
         if (itemText.includes(':')) {
-          const parts = itemText.split(':');
-          itemText = `<strong>${parts[0]}:</strong> ${parts.slice(1).join(':')}`;
+          const colonIdx = itemText.indexOf(':');
+          const boldLead = itemText.substring(0, colonIdx);
+          const restText = itemText.substring(colonIdx + 1);
+          itemText = `<strong>${boldLead}:</strong>${restText}`;
         }
-        bodyHtml += `<li>${itemText}</li>`;
+        bodyHtml += `<li><span className="bullet-icon">▪</span><span>${itemText}</span></li>`;
       } else {
         if (inList) { bodyHtml += '</ul>'; inList = false; }
         if (line.includes('@') && line.includes('|')) {
-          bodyHtml += `<div className="contact-bar">${line.split('|').join(' <span>|</span> ')}</div>`;
-        } else if (line.length < 55 && !line.endsWith('.')) {
-          bodyHtml += `<div className="sub-header">${line}</div>`;
+          contactInfo = line;
+        } else if (line.includes('202') || line.includes('201') || line.length < 60 && !line.endsWith('.')) {
+          // Check for date/year on right
+          const yearMatch = line.match(/(20\d\d\s*–\s*20\d\d|20\d\d)/);
+          if (yearMatch) {
+            const yearStr = yearMatch[0];
+            const leftText = line.replace(yearStr, '').trim();
+            bodyHtml += `<div className="row-split"><span className="bold-text">${leftText}</span><span className="year-text">${yearStr}</span></div>`;
+          } else {
+            bodyHtml += `<div className="item-title">${line}</div>`;
+          }
         } else {
-          bodyHtml += `<p>${line}</p>`;
+          bodyHtml += `<p className="para-text">${line}</p>`;
         }
       }
     });
@@ -112,9 +127,11 @@ export default function ResultsPage() {
       <head>
         <title>${title}</title>
         <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
           @page { size: A4; margin: 12mm 15mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
           body {
-            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Inter', Arial, sans-serif;
             color: #0f172a;
             line-height: 1.45;
             padding: 24px;
@@ -123,54 +140,91 @@ export default function ResultsPage() {
             background: #ffffff;
             font-size: 10pt;
           }
-          .contact-bar {
+          .header-name {
             text-align: center;
-            font-size: 9pt;
+            font-size: 20pt;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+            margin-bottom: 2px;
+          }
+          .header-subtitle {
+            text-align: center;
+            font-size: 9.5pt;
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 4px;
+          }
+          .header-contact {
+            text-align: center;
+            font-size: 8.5pt;
             color: #475569;
             margin-bottom: 16px;
-            padding-bottom: 8px;
           }
-          .contact-bar span {
-            margin: 0 4px;
-            color: #94a3b8;
-          }
-          .section-header {
+          .section-title {
             font-size: 11pt;
             font-weight: 800;
             color: #0284c7;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.5px;
             margin-top: 14px;
             margin-bottom: 6px;
             border-bottom: 1.5px solid #0284c7;
             padding-bottom: 2px;
           }
-          .sub-header {
-            font-weight: 700;
-            color: #0f172a;
-            font-size: 10pt;
-            margin-top: 6px;
+          .row-split {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-top: 4px;
             margin-bottom: 2px;
           }
-          p {
+          .bold-text {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 9.5pt;
+          }
+          .year-text {
+            font-weight: 600;
+            color: #475569;
+            font-size: 9pt;
+          }
+          .item-title {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 9.5pt;
+            margin-top: 4px;
+            margin-bottom: 2px;
+          }
+          .para-text {
             font-size: 9.5pt;
             color: #334155;
             margin-bottom: 4px;
             text-align: justify;
           }
-          ul {
+          .bullet-list {
+            list-style: none;
             margin-top: 3px;
-            margin-bottom: 8px;
-            padding-left: 18px;
+            margin-bottom: 6px;
+            padding-left: 0;
           }
-          li {
+          .bullet-list li {
             font-size: 9.5pt;
             color: #334155;
             margin-bottom: 3px;
             text-align: justify;
+            display: flex;
+            align-items: flex-start;
+          }
+          .bullet-icon {
+            color: #0f172a;
+            font-size: 8pt;
+            margin-right: 6px;
+            margin-top: 2px;
           }
           strong {
             color: #0f172a;
+            font-weight: 700;
           }
           @media print {
             body { padding: 0; }
@@ -178,6 +232,9 @@ export default function ResultsPage() {
         </style>
       </head>
       <body>
+        <div className="header-name">${candidateName}</div>
+        <div className="header-subtitle">${subTitle}</div>
+        <div className="header-contact">${contactInfo}</div>
         ${bodyHtml}
         <script>
           window.onload = function() {
@@ -190,7 +247,7 @@ export default function ResultsPage() {
 
     printWindow.document.write(fullHtml);
     printWindow.document.close();
-    toast.success('Opening PDF Resume Template!');
+    toast.success('Opening PDF Resume matching your uploaded template!');
   };
 
   const getScoreColor = (score: number) => {
@@ -223,7 +280,7 @@ export default function ResultsPage() {
             </div>
             <div className="flex items-center gap-3">
               <button onClick={handleDownloadPDF} className="btn-primary text-sm py-2 px-4 flex items-center gap-2 glow-blue">
-                <Printer className="w-4 h-4" /> Download PDF Resume Template
+                <Printer className="w-4 h-4" /> Download Rewritten PDF Template
               </button>
               <button onClick={handleDownloadTXT} className="btn-outline text-sm py-2 px-4 flex items-center gap-2">
                 <Download className="w-4 h-4" /> TXT
@@ -369,7 +426,7 @@ export default function ResultsPage() {
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
                   <button onClick={handleDownloadPDF} className="btn-primary text-xs py-2 px-3 flex items-center gap-1">
-                    <Printer className="w-4 h-4" /> Download Formatted PDF
+                    <Printer className="w-4 h-4" /> Download Rewritten PDF Template
                   </button>
                   <button onClick={handleDownloadTXT} className="btn-outline text-xs py-2 px-3 flex items-center gap-1">
                     <Download className="w-4 h-4" /> TXT
